@@ -3,6 +3,16 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
+// Debug logging
+if (typeof window !== 'undefined') {
+  console.log('🔧 Supabase Config:', {
+    url: supabaseUrl || 'MISSING',
+    keyPrefix: supabaseAnonKey ? supabaseAnonKey.substring(0, 20) + '...' : 'MISSING',
+    hasUrl: !!supabaseUrl,
+    hasKey: !!supabaseAnonKey
+  })
+}
+
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 // Types
@@ -59,12 +69,23 @@ export interface Publisher {
 
 // API Functions
 export async function fetchOffers() {
+  console.log('📡 Fetching offers from Supabase...')
   const { data, error } = await supabase
     .from('offers')
     .select('*, buyer:buyers(*)')
     .order('created_at', { ascending: false })
   
-  if (error) throw error
+  if (error) {
+    console.error('❌ Supabase Error:', {
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+      code: error.code
+    })
+    throw error
+  }
+  
+  console.log('✅ Offers fetched:', data?.length || 0)
   return data as Offer[]
 }
 
@@ -132,13 +153,18 @@ export async function fetchPublishers() {
 }
 
 export async function getStats() {
+  console.log('📊 Fetching stats from Supabase...')
   const [offers, buyers, publishers] = await Promise.all([
     supabase.from('offers').select('id, status, vertical'),
     supabase.from('buyers').select('id'),
     supabase.from('publishers').select('id')
   ])
   
-  return {
+  if (offers.error) console.error('❌ Offers error:', offers.error)
+  if (buyers.error) console.error('❌ Buyers error:', buyers.error)
+  if (publishers.error) console.error('❌ Publishers error:', publishers.error)
+  
+  const stats = {
     totalOffers: offers.data?.length || 0,
     totalBuyers: buyers.data?.length || 0,
     totalPublishers: publishers.data?.length || 0,
@@ -152,4 +178,7 @@ export async function getStats() {
       return acc
     }, {})
   }
+  
+  console.log('✅ Stats:', stats)
+  return stats
 }
