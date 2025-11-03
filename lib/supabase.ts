@@ -8,9 +8,29 @@ if (typeof window !== 'undefined') {
   console.log('🔧 Supabase Config:', {
     url: supabaseUrl || 'MISSING',
     keyPrefix: supabaseAnonKey ? supabaseAnonKey.substring(0, 20) + '...' : 'MISSING',
+    keyLength: supabaseAnonKey ? supabaseAnonKey.length : 0,
     hasUrl: !!supabaseUrl,
-    hasKey: !!supabaseAnonKey
+    hasKey: !!supabaseAnonKey,
+    // Check for common issues
+    hasWhitespace: supabaseAnonKey ? /\s/.test(supabaseAnonKey) : false,
+    startsWithEyJ: supabaseAnonKey ? supabaseAnonKey.startsWith('eyJ') : false
   })
+  
+  // Test a simple request to see the actual HTTP response
+  console.log('🧪 Testing Supabase connection...')
+  fetch(`${supabaseUrl}/rest/v1/offers?select=id&limit=1`, {
+    headers: {
+      'apikey': supabaseAnonKey,
+      'Authorization': `Bearer ${supabaseAnonKey}`
+    }
+  })
+    .then(res => {
+      console.log('📡 Test response status:', res.status)
+      console.log('📡 Test response headers:', Object.fromEntries(res.headers.entries()))
+      return res.text()
+    })
+    .then(text => console.log('📡 Test response body:', text))
+    .catch(err => console.error('❌ Test connection failed:', err))
 }
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
